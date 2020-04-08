@@ -1,0 +1,7 @@
+{
+    "client_id": "<App Registration Application ID>",
+    "client_secret": "<App Registration Secret>",
+    "subscription": "<Subscription ID>"
+    "grant_type": "client_credentials",
+    "resource": "https://management.azure.com/"
+}

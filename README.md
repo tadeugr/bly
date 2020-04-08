@@ -1,5 +1,6 @@
 # bly
-Think of Google (or Bing) but for internal enterprise content
+
+Bly is a powerfull search engine for private content.
 
 # Named after Nellie Bly
 
