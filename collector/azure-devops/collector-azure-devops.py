@@ -14,6 +14,7 @@ with open('./auth.json', 'r') as myfile:
 _AUTH = json.loads(data)
 
 _ORGANIZATION = _AUTH["organization"]
+_WRITE_TO_FILE = []
 
 def makeFileName(filename):
     keepcharacters = ('.','_', '-')
@@ -31,16 +32,15 @@ class Wiki:
 
     def setPagesContent(self, pages):
 
-        if "subPages" in pages and len(pages["subPages"]) > 1:
+        if "subPages" in pages and len(pages["subPages"]) > 0:
             for subpage in pages["subPages"]:
                 self.setPagesContent(subpage)
         else:
-            pages["content"] = self.getPageContent(pages)
-
+            content = self.getPageContent(pages)
+            pages["_bly_collector_content"] = content
+            _WRITE_TO_FILE.append(pages)
 
     def getPageContent(self, page):
-
-        #return "aaaaaaaaaaaa"+str(uuid.uuid1())
 
         if "path" not in page or page["path"] == "":
             logging.error("Page has no path: "+json.dumps(page))
@@ -90,8 +90,6 @@ url = 'https://dev.azure.com/'+_ORGANIZATION+'/_apis/projects?api-version=2.0'
 response = requests.get(url, data={}, auth=(_AUTH["user"], _AUTH["token"]))
 response = json.loads(response.text)
 projects = response
-#pprint(projects)
-#sys.exit()
 
 logging.debug("END Get projects")
 
@@ -107,9 +105,9 @@ for project in projects["value"]:
     file_path= "../../data/azure-devops_"+makeFileName(_ORGANIZATION+"_"+project["name"]+".json")
 
     # @TODO create arg to skip files
-    if os.path.exists(file_path):
-        logging.info("Skipping "+file_path)
-        continue
+    #if os.path.exists(file_path):
+    #    logging.info("Skipping "+file_path)
+    #    continue
 
     logging.debug("START get wikis")
 
@@ -136,6 +134,7 @@ for project in projects["value"]:
         logging.debug("START get pages")
         
         #GET   https://dev.azure.com/{organization}/{project}/_apis/wiki/wikis/{wikiIdentifier}/pages?path=/SamplePage973&includeContent=True&api-version=5.1
+        #if wiki["id"] != "bd54602c-e126-4c3d-ac1d-f1efdd172f53": continue
         url = 'https://dev.azure.com/'+_ORGANIZATION+'/'+project["id"]+'/_apis/wiki/wikis/'+wiki["id"]+'/pages?api-version=5.1&path=%2F&recursionLevel=120&includeContent=True&VersionControlRecursionType=full'
         response = requests.get(url, data={}, auth=(_AUTH["user"], _AUTH["token"]))
         response = json.loads(response.text)
@@ -162,16 +161,25 @@ for project in projects["value"]:
 
     logging.debug("END iterate wikis") 
 
-    logging.debug("START write file "+file_path)
+    #logging.debug("START write file "+file_path)
 
     #pprint(resource_result)
-    project_array = []
-    project_array.append(project)
-    resource_result = json.dumps(project_array)
-    file = open(file_path,"w")  
-    file.write(resource_result)
-    file.close()
+    #project_array = []
+    #project_array.append(project)
+    #resource_result = json.dumps(project_array)
+    #file = open(file_path,"w")  
+    #file.write(resource_result)
+    #file.close()
 
-    logging.debug("END write file "+file_path)
+    #logging.debug("END write file "+file_path)
 
-        
+logging.debug("START write file "+file_path)
+
+file_path= "../../data/azure-devops_"+makeFileName(_ORGANIZATION+".json")
+
+resource_result = json.dumps(_WRITE_TO_FILE)
+file = open(file_path,"w")  
+file.write(resource_result)
+file.close()
+
+logging.debug("END write file "+file_path)
