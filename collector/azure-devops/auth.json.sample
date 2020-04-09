@@ -1,0 +1,6 @@
+{
+    "user": "youruser@domain.com",
+    "token": "youtoken",
+    "organization": "put-your-organization-here",
+    "skip_all_but": "process-all-projects-but-this-one"
+}

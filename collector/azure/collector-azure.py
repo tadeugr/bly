@@ -110,7 +110,7 @@ for provider in providers["value"]:
 
     #pprint(resource_result)
     resource_result = json.dumps(resource_result)
-    file = open("../../data/"+resource_name+".json","w")  
+    file = open(file_path,"w")  
     file.write(resource_result)
     file.close()
 
