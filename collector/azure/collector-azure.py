@@ -5,6 +5,18 @@ import json
 from pprint import pprint
 import logging
 import time
+import os
+
+_COUNT_REQUESTS = 0
+
+def countRequests():
+    global _COUNT_REQUESTS
+    _COUNT_REQUESTS += 1
+    if _COUNT_REQUESTS == 800:
+        logging.info("Sleeping for 5min")
+        time.sleep(300)
+        _COUNT_REQUESTS = 0
+    return True
 
 #logging.basicConfig(filename='./output.log', level=logging.DEBUG)
 root = logging.getLogger()
@@ -23,6 +35,7 @@ auth = json.loads(data)
 
 url = 'https://login.microsoftonline.com/cef04b19-7776-4a94-b89b-375c77a8f936/oauth2/token'
 response = requests.post(url, data = auth)
+countRequests()
 response = json.loads(response.text)
 access_token = response["access_token"]
 
@@ -44,6 +57,7 @@ logging.debug("START Get providers")
 url = 'https://management.azure.com/subscriptions/'+subscription+'/providers?api-version=2019-10-01'
 headers = {"Authorization": "Bearer "+access_token}
 response = requests.get(url, data={}, headers=headers)
+countRequests()
 response = json.loads(response.text)
 providers = response
 
@@ -54,7 +68,7 @@ logging.debug("START iterate providers")
 logging.info("Found # of providers: "+str(len(providers["value"])))
 
 for provider in providers["value"]:
-    if "Microsoft.ContainerService" not in provider["id"]: continue
+    #if "Microsoft.ContainerService" not in provider["id"]: continue
 
     logging.debug("START process provider "+provider["id"])
 
@@ -75,15 +89,24 @@ for provider in providers["value"]:
 
         resource_name = provider["id"]+'__'+name+'_'+api
         resource_name = resource_name.replace("/", "_")
+
+        file_path = "../../data/"+resource_name+".json"
+
+        # @TODO create arg to skip files
+        if os.path.exists(file_path):
+            logging.info("Skipping "+file_path)
+            continue
+
         url = 'https://management.azure.com'+provider["id"]+'/'+name+'?api-version='+api
         #print(url)
         headers = {"Authorization": "Bearer "+access_token}
         response = requests.get(url, data={}, headers=headers)
+        countRequests()
         
         logging.debug("END request resource info "+name)
 
-        logging.debug("Sleep for 1s")
-        time.sleep(1)
+        #logging.debug("Sleep for 1s")
+        #time.sleep(1)
 
         if response.status_code != 200:
             logging.error("Status code "+str(response.status_code)+" when requesting "+url)
@@ -91,8 +114,19 @@ for provider in providers["value"]:
         
         logging.debug("START get resource values")
 
+        try:
+            response_json = json.loads(response.text)
+        except Exception as e:
+            logging.error("URL did not return a valid json: "+url)
+            continue
 
-        response_json = json.loads(response.text)
+        try:
+            for value in response_json["value"]:
+                break
+        except Exception as e:
+            logging.error("URL response not iteratable: "+url)
+            continue
+
         logging.info("Found # of resource values: "+str(len(response_json["value"])))
         for value in response_json["value"]:
             resource_result.append(value)
@@ -103,9 +137,6 @@ for provider in providers["value"]:
     
     logging.debug("END process provider "+provider["id"])
 
-
-    file_path= "../../data/"+resource_name+".json"
-    
     logging.debug("START write file "+file_path)
 
     #pprint(resource_result)
